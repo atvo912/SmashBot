@@ -19,7 +19,7 @@ class Powershield(Chain):
         firefox = opponent_state.action in [Action.SWORD_DANCE_4_HIGH, Action.SWORD_DANCE_4_MID] and opponent_state.character in [Character.FOX, Character.FALCO]
 
         # If we get to cooldown, let go
-        attackstate = self.framedata.attack_state(opponent_state)
+        attackstate = self.framedata.attackstate_simple(opponent_state)
         if attackstate in [melee.enums.AttackState.COOLDOWN, melee.enums.AttackState.NOT_ATTACKING] \
                 and len(gamestate.projectiles) == 0 and not firefox:
             self.interruptible = True
@@ -38,6 +38,9 @@ class Powershield(Chain):
         if smashbot_state.action == Action.SHIELD_RELEASE:
             self.interruptible = True
             controller.empty_input()
+            #controller.press_button(Button.BUTTON_Y) #test jump OOS
+            #controller.press_button(Button.BUTTON_B) #test powershield shine
+            #controller.tilt_analog(Button.BUTTON_MAIN, .5, 0) #test powershield shine
             return
 
         isshielding = smashbot_state.action == Action.SHIELD \

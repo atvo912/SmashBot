@@ -16,7 +16,7 @@ class Waveshine(Chain):
 
         shineablestates = [Action.TURNING, Action.STANDING, Action.WALK_SLOW, Action.WALK_MIDDLE, \
             Action.WALK_FAST, Action.EDGE_TEETERING_START, Action.EDGE_TEETERING, Action.CROUCHING, \
-            Action.RUNNING]
+            Action.RUNNING, Action.RUN_BRAKE, Action.CROUCH_START, Action.CROUCH_END]
 
         jcshine = (smashbot_state.action == Action.KNEE_BEND) and (smashbot_state.action_frame == 3)
         lastdashframe = (smashbot_state.action == Action.DASHING) and (smashbot_state.action_frame == 12)
@@ -52,6 +52,12 @@ class Waveshine(Chain):
             self.interruptible = True
             controller.release_button(Button.BUTTON_B)
             controller.tilt_analog(Button.BUTTON_MAIN, int(not smashbot_state.facing), .5)
+            #controller.press_button(Button.BUTTON_Y) #attempt JC shine instead of pivot shine
+            return
+
+        # In the off-chance waveshine.py gets called during GRAB_WAIT
+        if smashbot_state.action == Action.GRAB_WAIT:
+            self.pickchain(Chains.GrabAndThrow, [THROW_DIRECTION.DOWN])
             return
 
         isInShineStart = smashbot_state.action in [Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND]
@@ -91,7 +97,7 @@ class Waveshine(Chain):
                 direction = onleft
 
             # Unless we're RIGHT on top of the edge. In which case the only safe wavedash is back on the stage
-            edge_x = melee.stages.EDGE_GROUND_POSITION[gamestate.stage]
+            edge_x = melee.stages.edgegroundposition(gamestate.stage)
             if opponent_state.x < 0:
                 edge_x = -edge_x
             edgedistance = abs(edge_x - smashbot_state.x)
@@ -106,11 +112,11 @@ class Waveshine(Chain):
             delta = (self.distance / 2) # 0->0.5
             if not direction:
                 delta = -delta
-            controller.tilt_analog(Button.BUTTON_MAIN, 0.5 + delta, .35) #near perfect WD angle
+            controller.tilt_analog(Button.BUTTON_MAIN, 0.5 + delta, .35) #consider adding functionality for perfect WD angle which is x:0.9625 y:-0.2875 using standard coordinates from -1 to 1
             return
 
         # If we're sliding and have shined, then we're all done here
-        if smashbot_state.action == Action.LANDING_SPECIAL and self.hasshined:
+        if smashbot_state.action == Action.LANDING_SPECIAL: #removed and self.hasshined
             self.interruptible = True
             controller.empty_input()
             return
