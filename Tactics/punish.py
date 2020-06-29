@@ -5,6 +5,8 @@ from melee.enums import Action, Button, Character
 from Tactics.tactic import Tactic
 from Chains.smashattack import SMASH_DIRECTION
 from Chains.shffl import SHFFL_DIRECTION
+from Chains.grabandthrow import THROW_DIRECTION
+from Chains.tiltattack import TILT_DIRECTION
 
 class Punish(Tactic):
     # How many frames do we have to work with for the punish
@@ -84,7 +86,7 @@ class Punish(Tactic):
             if opponent_state.action in [Action.LYING_GROUND_UP, Action.LYING_GROUND_DOWN]:
                 return 1
 
-            # If opponent is in the air, we need to cap the retun at when they will hit the ground
+            # If opponent is in the air, we need to cap the return at when they will hit the ground
             if opponent_state.y > .02 or not opponent_state.on_ground:
                 # When will they land?
                 speed = opponent_state.speed_y_attack + opponent_state.speed_y_self
@@ -100,7 +102,8 @@ class Punish(Tactic):
                     # Shortcut if we get too far
                     if count > 120:
                         break
-                return count
+                #return count #need to modify this old line so it returns the lower value between count (projected airtime) and hitstun_frames_left rather than just count.
+                return min(count, opponent_state.hitstun_frames_left) #proposed fix
 
             return opponent_state.hitstun_frames_left
 
@@ -156,7 +159,7 @@ class Punish(Tactic):
             Action.RUNNING]
 
         #TODO: Wrap the shine range into a helper
-        foxshinerange = 11.8
+        foxshinerange = 10 #lowered from 11.8
         inshinerange = gamestate.distance < foxshinerange
 
         if inshinerange and smashbot_state.action in shineablestates:
@@ -181,8 +184,11 @@ class Punish(Tactic):
             self.chain.step(gamestate, smashbot_state, opponent_state)
             return
 
-        # TODO: This should be all inactionalbe animations, actually
-        if smashbot_state.action == Action.THROW_DOWN:
+        # TODO: This should be all inactionable animations, actually
+        inactionablestates = [Action.THROW_DOWN, Action.THROW_UP, Action.THROW_FORWARD, Action.THROW_BACK, Action.UAIR_LANDING, Action.FAIR_LANDING, \
+                Action.DAIR_LANDING, Action.BAIR_LANDING, Action.NAIR_LANDING, Action.UPTILT, Action.DOWNTILT, Action.UPSMASH, \
+                Action.DOWNSMASH]
+        if smashbot_state.action in inactionablestates:
             self.pickchain(Chains.Nothing)
             return
 
@@ -193,18 +199,18 @@ class Punish(Tactic):
 
         # How many frames do we need for an upsmash?
         # It's 7 frames normally, plus some transition frames
-        # 3 if in shield, shine, or dash/running
-        framesneeded = 7
+        # 1 if in shield, shine, or dash/running
+        framesneeded = 7 # Maybe add some logic here to LOOK at framesleft, and then choose a specific option depending on how large it is? Or maybe just leave as-is.
         shieldactions = [Action.SHIELD_START, Action.SHIELD, Action.SHIELD_RELEASE, \
             Action.SHIELD_STUN, Action.SHIELD_REFLECT]
         shineactions = [Action.DOWN_B_STUN, Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND]
         runningactions = [Action.DASHING, Action.RUNNING]
         if smashbot_state.action in shieldactions:
-            framesneeded += 3
+            framesneeded += 1 #lowered from 3 to 1
         if smashbot_state.action in shineactions:
-            framesneeded += 3
+            framesneeded += 1 #lowered from 3 to 1
         if smashbot_state.action in runningactions:
-            framesneeded += 3
+            framesneeded += 1 #lowered from 3 to 1
 
         endposition = opponent_state.x
         isroll = self.framedata.isroll(opponent_state.character, opponent_state.action)
@@ -260,13 +266,10 @@ class Punish(Tactic):
                 else:
                     smashbot_endposition += 4.8
 
-            if self.logger:
-                self.logger.log("Notes", "endposition: " + str(endposition) + " ", concat=True)
-                self.logger.log("Notes", "smashbot_endposition: " + str(smashbot_endposition) + " ", concat=True)
-
             facing = smashbot_state.facing == (smashbot_endposition < endposition)
             # Remember that if we're turning, the attack will come out the opposite way
-            if smashbot_state.action == Action.TURNING:
+            #if smashbot_state.action == Action.TURNING:
+            if smashbot_state.action == Action.TURNING and smashbot_state.action_frame == 1: #on frame 1 of smashturn, smashbot hasn't officially changed directions yet. on frame 2, we have. tilt turn may be a problem.
                 facing = not facing
 
             # Get height of opponent at the targeted frame
@@ -275,29 +278,55 @@ class Punish(Tactic):
             speed = opponent_state.speed_y_attack
             gravity = self.framedata.characterdata[opponent_state.character]["Gravity"]
             termvelocity = self.framedata.characterdata[opponent_state.character]["TerminalVelocity"]
-            if not opponent_state.on_ground and not firefox:
+            #if not opponent_state.on_ground and not firefox:
                 # Loop through each frame and count the distances
-                for i in range(framesleft):
-                    speed -= gravity
+                #for i in range(framesleft):
+                    #speed -= gravity
                     # We can't go faster than termvelocity downwards
-                    speed = max(speed, -termvelocity)
-                    height += speed
+                    #speed = max(speed, -termvelocity)
+                    #height += speed
+
+            if self.logger:
+                self.logger.log("Notes", "endposition: " + str(endposition) + " ", concat=True)
+                self.logger.log("Notes", "smashbot_endposition: " + str(smashbot_endposition) + " ", concat=True)
+                self.logger.log("Notes", "height" + str(height) + " ", concat=True)
+                self.logger.log("Notes", "Distance: " + str(gamestate.distance), concat=True)
 
             distance = abs(endposition - smashbot_endposition)
-            if not slideoff and distance < 14.5 and -5 < height < 8:
+
+            if not slideoff and distance < 14.5 and -5 < height < 17: #REMOVED -5 < height < 8 to make Smashbot attempt chaingrabbing #Consider adding some conditions here/below to check for CC/ASDI percentages and/or other relevant percentages
+                #if smashbot_state.action == Action.SHIELD_RELEASE and smashbot_state.action_frame == 1:
+                    #self.pickchain(Chains.Powershield)
                 if facing:
                     # Do the upsmash
                     # NOTE: If we get here, we want to delete the chain and start over
                     #   Since the amount we need to charge may have changed
+                    # Tai would like to add some more complexity here where we have a larger variety of chains to select from, with varying stored framesneeded values & some logic with a random function for choosing one.
                     self.chain = None
-                    self.pickchain(Chains.SmashAttack, [framesleft-framesneeded-1, SMASH_DIRECTION.UP])
-                    return
-                else:
+                    if (opponent_state.action in [Action.TECH_MISS_DOWN, Action.TECH_MISS_UP]) or (opponent_state.percent >= 100):
+                        self.pickchain(Chains.SmashAttack, [framesleft-framesneeded-1, SMASH_DIRECTION.UP])
+                    ##EVERYTHING BELOW HERE IS EXPERIMENTAL
+                    #if framesleft < 20 and framesleft > 9:
+                        #self.pickchain(Chains.Nothing)
+                        return
+                    if (framesleft in range(7,9) and opponent_state.action not in [Action.TECH_MISS_DOWN, Action.TECH_MISS_UP]) or (smashbot_state.action == Action.GRAB_WAIT):
+                        if opponent_state.character in [Character.CPTFALCON, Character.FALCO, Character.FOX]:
+                            self.pickchain(Chains.GrabAndThrow, [THROW_DIRECTION.UP]) #test dthrow instead of usmash
+                        else:
+                            self.pickchain(Chains.GrabAndThrow, [THROW_DIRECTION.DOWN])
+                        #self.pickchain(Chains.Shffl, [SHFFL_DIRECTION.UP]) #test shffl uair instead of usmash
+                        #self.pickchain(Chains.TiltAttack, [TILT_DIRECTION.TURNAROUND]) #test utilt instead of usmash
+                    #if framesleft == 9 or framesleft == 8 or framesleft == 7 and distance < 0.5 and (smashbot_state.action != Action.GRAB_WAIT):
+                        #self.pickchain(Chains.TiltAttack, [TILT_DIRECTION.UP])
+                    ##EVERTHING ABOVE HERE IS EXPERIMENTAL
+                        return
+                else:  #add functionality to look for utilt here, requires creating tiltattack.py chain
                     # Do the bair if there's not enough time to wavedash, but we're facing away and out of shine range
                     #   This shouldn't happen often, but can if we're pushed away after powershield
                     offedge = melee.stages.edgegroundposition(gamestate.stage) < abs(endposition)
-                    if framesleft < 11 and distance > 9 and not offedge:
-                        self.pickchain(Chains.Shffl, [SHFFL_DIRECTION.BACK])
+                    if (framesleft in range(7,9)) and not offedge: #removed framesleft condition and distance > 9 condition for SHFFL bair
+                        #self.pickchain(Chains.Shffl, [SHFFL_DIRECTION.BACK])
+                        self.pickchain(Chains.TiltAttack, [TILT_DIRECTION.UP]) #test utilt instead of usmash
                         return
             # If we're not in attack range, and can't run, then maybe we can wavedash in
             #   Now we need more time for the wavedash. 10 frames of lag, and 3 jumping
@@ -316,9 +345,14 @@ class Punish(Tactic):
             framesneeded = 4
         if smashbot_state.action in [Action.DOWN_B_STUN, Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND]:
             framesneeded = 4
-        foxshinerange = 11.8
+
+        foxshinerange = 10 # Lowered from 11.8
+        if smashbot_state.action == Action.DASHING:
+            foxshinerange = 9
+
         if gamestate.distance < foxshinerange:
             if framesneeded <= framesleft:
+            #if framesleft in range(1,5): #attempted changed to prevent triggering waveshines when we would prefer to wait for other punishes
                 # Also, don't shine someone in the middle of a roll
                 if (not isroll) or (opponent_state.action_frame < 3):
                     self.chain = None

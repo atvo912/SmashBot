@@ -15,9 +15,9 @@ class Infinite(Tactic):
         if character == Character.CPTFALCON:
             return 113
         if character == Character.FALCO:
-            return 93
+            return 103
         if character == Character.FOX:
-            return 86
+            return 96
         if character == Character.SHEIK:
             return 92
         if character == Character.PIKACHU:
@@ -30,7 +30,9 @@ class Infinite(Tactic):
             return 79
         if character == Character.JIGGLYPUFF:
             return 55
-        return 120
+        if character == Character.SAMUS:
+            return 88
+        return 100
 
     def caninfinite(smashbot_state, opponent_state, gamestate, framedata, difficulty):
         isroll = framedata.isroll(opponent_state.character, opponent_state.action)
@@ -51,6 +53,7 @@ class Infinite(Tactic):
 
         # Give up the infinite if we're in our last dashing frame, and are getting close to the edge
         #   We are at risk of running off the edge when this happens
+        # This section should probably be re-written. At the moment, this section causes Smashbot to give up the infinite and return to keepdistance.py
         if smashbot_state.action == Action.DASHING and smashbot_state.action_frame >= 11:
             if (smashbot_state.speed_ground_x_self > 0) == (smashbot_state.x > 0):
                 edge_x = melee.stages.edgegroundposition(gamestate.stage)
@@ -72,7 +75,7 @@ class Infinite(Tactic):
         if framedata.characterdata[opponent_state.character]["Friction"] >= 0.06 and \
                 opponent_state.hitstun_frames_left > 1 and not isroll and opponent_state.on_ground \
                 and opponent_state.percent < Infinite.killpercent(opponent_state):
-            return True
+            return True #we might want to add some random logic here to make SmashBot opt for other combo routes aside from waveshine infinite
 
         return False
 
@@ -91,14 +94,14 @@ class Infinite(Tactic):
         # This is off by one for hitstun
         framesleft -= 1
 
-        shinerange = 11.8
+        shinerange = 10 #lowered from 11.8
         if smashbot_state.action == Action.DASHING:
             shinerange = 9
 
         # Try to do the shine
         if gamestate.distance < shinerange:
             # emergency backup shine
-            if framesleft == 1:
+            if framesleft in range(1,2): #changed from framesleft == 1 so he goes for shine early if he can
                 self.chain = None
                 self.pickchain(Chains.Waveshine)
                 return
@@ -125,5 +128,10 @@ class Infinite(Tactic):
         if smashbot_state.action == Action.LANDING_SPECIAL and smashbot_state.action_frame < 28:
             self.pickchain(Chains.Nothing)
             return
-        self.pickchain(Chains.Run, [opponent_state.speed_x_attack > 0])
+
+        if self.logger:
+            self.logger.log("Notes", "Distance: " + str(gamestate.distance), concat=True)
+
+        #self.pickchain(Chains.Run, [opponent_state.speed_x_attack > 0]) #this might sometimes cause smashbot to incorrectly run AWAY from the opponent's endposition bc opponent is still mid roll
+        self.pickchain(Chains.Run, [opponent_state.x > smashbot_state.x])
         return

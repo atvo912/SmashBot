@@ -10,7 +10,7 @@ class Pressure(Tactic):
     def __init__(self, logger, controller, framedata, difficulty):
         Tactic.__init__(self, logger, controller, framedata, difficulty)
         # Pick a random max number of shines
-        self.shinemax = random.randint(0, 8)
+        self.shinemax = random.randint(0, 69)
         self.shinecount = 0
 
         self.waveshine = False
@@ -31,7 +31,8 @@ class Pressure(Tactic):
 
         # 50% chance of being SHFFL style pressure
         if rand == 1:
-            self.shffl = True
+            #self.shffl = True #Testing the multishine pressure
+            self.waveshine = True
         # 30% chance of being waveshine style pressure
         if rand == 2:
             self.waveshine = True
@@ -43,7 +44,7 @@ class Pressure(Tactic):
     def canpressure(opponent_state, gamestate):
         # Opponent must be shielding
         shieldactions = [Action.SHIELD_START, Action.SHIELD, \
-            Action.SHIELD_STUN, Action.SHIELD_REFLECT]
+            Action.SHIELD_STUN, Action.SHIELD_REFLECT, Action.SHIELD_RELEASE]
         sheilding = opponent_state.action in shieldactions
 
         if opponent_state.invulnerability_left > 0:

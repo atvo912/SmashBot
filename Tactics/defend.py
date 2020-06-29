@@ -11,7 +11,8 @@ class Defend(Tactic):
 
         # Ignore Fox lasers. They 'just' do damage. Nothing we actually care about
         #   It's worse to put ourselves in stun just to prevent a few percent
-        if opponent_state.character == Character.FOX:
+        throwstates = [Action.THROW_DOWN, Action.THROW_UP, Action.THROW_FORWARD, Action.THROW_BACK]
+        if opponent_state.character == Character.FOX or smashbot_state.action in throwstates:
             return False
 
         # Loop through each projectile
