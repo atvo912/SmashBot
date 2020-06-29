@@ -323,7 +323,7 @@ class Punish(Tactic):
                 else:  #add functionality to look for utilt here, requires creating tiltattack.py chain
                     # Do the bair if there's not enough time to wavedash, but we're facing away and out of shine range
                     #   This shouldn't happen often, but can if we're pushed away after powershield
-                    offedge = melee.stages.edgegroundposition(gamestate.stage) < abs(endposition)
+                    offedge = melee.stages.EDGE_GROUND_POSITION[gamestate.stage] < abs(endposition)
                     if (framesleft in range(7,9)) and not offedge: #removed framesleft condition and distance > 9 condition for SHFFL bair
                         #self.pickchain(Chains.Shffl, [SHFFL_DIRECTION.BACK])
                         self.pickchain(Chains.TiltAttack, [TILT_DIRECTION.UP]) #test utilt instead of usmash
