@@ -35,9 +35,12 @@ class GrabAndThrow(Chain):
             return
 
         # If we need to jump cancel, do it
-        jcstates = [Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND]
+        jcstates = [Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND, Action.SHIELD, Action.SHIELD_RELEASE, Action.SHIELD_START, Action.DASHING, Action.RUNNING, Action.RUN_BRAKE,  Action.CROUCH_START, Action.CROUCH_END, Action.CROUCHING] #added more action states
         if (smashbot_state.action in jcstates) and smashbot_state.action_frame >= 3:
             controller.press_button(Button.BUTTON_Y)
+            if controller.prev.button[Button.BUTTON_Y]:
+                controller.press_button(Button.BUTTON_X) #press X if Y is already held
+                return
             controller.release_button(Button.BUTTON_Z)
             return
 
@@ -68,4 +71,6 @@ class GrabAndThrow(Chain):
         if controller.prev.button[Button.BUTTON_Z]:
             controller.release_button(Button.BUTTON_Z)
             return
-        controller.press_button(Button.BUTTON_Z)
+        grabstates = [Action.GRAB_WAIT, Action.GRAB_PULLING, Action.GRAB_PUMMEL]
+        if smashbot_state.action not in grabstates and smashbot_state.action not in jcstates: #prevents getting stuck in infinite pummel loop
+            controller.press_button(Button.BUTTON_Z)

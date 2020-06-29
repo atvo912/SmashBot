@@ -64,7 +64,7 @@ class Wavedash(Chain):
             x = (self.distance / 2) + .5
             if onleft != self.towards:
                 x = -x
-            controller.tilt_analog(Button.BUTTON_MAIN, x, .35) #near perfect wavedash angle
+            controller.tilt_analog(Button.BUTTON_MAIN, x, 0.35) #consider adding functionality for perfect WD angle which is x:0.9625 y:-0.2875 using standard coordinates from -1 to 1
             return
 
         # If we're sliding and have shined, then we're all done here
