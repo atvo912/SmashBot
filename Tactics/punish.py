@@ -308,7 +308,7 @@ class Punish(Tactic):
                     ##EVERYTHING BELOW HERE IS EXPERIMENTAL
                     #if framesleft < 20 and framesleft > 9:
                         #self.pickchain(Chains.Nothing)
-                        return
+                        #return
                     if (framesleft in range(7,9) and opponent_state.action not in [Action.TECH_MISS_DOWN, Action.TECH_MISS_UP]) or (smashbot_state.action == Action.GRAB_WAIT):
                         if opponent_state.character in [Character.CPTFALCON, Character.FALCO, Character.FOX]:
                             self.pickchain(Chains.GrabAndThrow, [THROW_DIRECTION.UP]) #test dthrow instead of usmash
@@ -316,10 +316,10 @@ class Punish(Tactic):
                             self.pickchain(Chains.GrabAndThrow, [THROW_DIRECTION.DOWN])
                         #self.pickchain(Chains.Shffl, [SHFFL_DIRECTION.UP]) #test shffl uair instead of usmash
                         #self.pickchain(Chains.TiltAttack, [TILT_DIRECTION.TURNAROUND]) #test utilt instead of usmash
-                    #if framesleft == 9 or framesleft == 8 or framesleft == 7 and distance < 0.5 and (smashbot_state.action != Action.GRAB_WAIT):
-                        #self.pickchain(Chains.TiltAttack, [TILT_DIRECTION.UP])
+                    if framesleft == 9 or framesleft == 8 or framesleft == 7 and distance < 0.5 and (smashbot_state.action != Action.GRAB_WAIT):
+                        self.pickchain(Chains.TiltAttack, [TILT_DIRECTION.UP])
                     ##EVERTHING ABOVE HERE IS EXPERIMENTAL
-                        return
+                    return
                 else:  #add functionality to look for utilt here, requires creating tiltattack.py chain
                     # Do the bair if there's not enough time to wavedash, but we're facing away and out of shine range
                     #   This shouldn't happen often, but can if we're pushed away after powershield
@@ -352,7 +352,7 @@ class Punish(Tactic):
 
         if gamestate.distance < foxshinerange:
             if framesneeded <= framesleft:
-            #if framesleft in range(1,5): #attempted changed to prevent triggering waveshines when we would prefer to wait for other punishes
+            #if framesleft in range(1,5): #attempted change to prevent triggering waveshines when we would prefer to wait for other punishes
                 # Also, don't shine someone in the middle of a roll
                 if (not isroll) or (opponent_state.action_frame < 3):
                     self.chain = None

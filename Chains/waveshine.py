@@ -55,16 +55,18 @@ class Waveshine(Chain):
             #controller.press_button(Button.BUTTON_Y) #attempt JC shine instead of pivot shine
             return
 
-        # In the off-chance waveshine.py gets called during GRAB_WAIT
+        # In the off-chance waveshine.py gets called during GRAB_WAIT, down-throw
         if smashbot_state.action == Action.GRAB_WAIT:
-            self.pickchain(Chains.GrabAndThrow, [THROW_DIRECTION.DOWN])
+            controller.tilt_analog(Button.BUTTON_MAIN, .5, 0)
+            if self.controller.prev.main_stick[1] == 0:
+                controller.empty_input()
             return
 
         isInShineStart = smashbot_state.action in [Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND]
-        isinshield = smashbot_state.action in [Action.SHIELD_RELEASE, Action.SHIELD]
+        needsJC = smashbot_state.action in [Action.SHIELD_RELEASE, Action.SHIELD, Action.TURNING_RUN] #Added TURNING_RUN in case waveshine gets called during that animation
 
         # Jump out of shield
-        if isinshield:
+        if needsJC:
             if controller.prev.button[Button.BUTTON_Y]:
                 controller.empty_input()
                 return

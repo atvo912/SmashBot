@@ -86,7 +86,7 @@ class DashDance(Chain):
                 return
 
         #We need to input a jump to wavedash out of these states if dash/run gets called while in one of these states, or else we get stuck
-        jcstates = [Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND]
+        jcstates = [Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND, Action.TURNING_RUN] #added TURNING_RUN because smashbot was getting stuck in this state
         if (smashbot_state.action in jcstates) or (smashbot_state.action == Action.TURNING and smashbot_state.action_frame in range(2,12)): #detects accidental tilt turns
                 self.controller.press_button(Button.BUTTON_Y)
                 return
