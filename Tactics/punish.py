@@ -60,7 +60,7 @@ class Punish(Tactic):
         if framedata.is_attack(opponent_state.character, opponent_state.action):
             # What state of the attack is the opponent in?
             # Windup / Attacking / Cooldown
-            attackstate = framedata.attack_state(opponent_state)
+            attackstate = framedata.attack_state(opponent_state.character, opponent_state.action, opponent_state.action_frame)
             if attackstate == melee.enums.AttackState.WINDUP:
                 # Don't try to punish opponent in windup when they're invulnerable
                 if opponent_state.invulnerability_left > 0:
@@ -184,10 +184,10 @@ class Punish(Tactic):
             self.chain.step(gamestate, smashbot_state, opponent_state)
             return
 
-        # TODO: This should be all inactionable animations, actually
+        # TODO: May be missing some relevant inactionable states
         inactionablestates = [Action.THROW_DOWN, Action.THROW_UP, Action.THROW_FORWARD, Action.THROW_BACK, Action.UAIR_LANDING, Action.FAIR_LANDING, \
                 Action.DAIR_LANDING, Action.BAIR_LANDING, Action.NAIR_LANDING, Action.UPTILT, Action.DOWNTILT, Action.UPSMASH, \
-                Action.DOWNSMASH]
+                Action.DOWNSMASH, Action.FSMASH_MID, Action.FTILT_MID, Action.FTILT_LOW, Action.FTILT_HIGH]
         if smashbot_state.action in inactionablestates:
             self.pickchain(Chains.Nothing)
             return

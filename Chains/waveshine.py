@@ -16,7 +16,7 @@ class Waveshine(Chain):
 
         shineablestates = [Action.TURNING, Action.STANDING, Action.WALK_SLOW, Action.WALK_MIDDLE, \
             Action.WALK_FAST, Action.EDGE_TEETERING_START, Action.EDGE_TEETERING, Action.CROUCHING, \
-            Action.RUNNING, Action.RUN_BRAKE, Action.CROUCH_START, Action.CROUCH_END] #added last 3 because smashbot would do nothing if Chains.Waveshine was called during them
+            Action.RUNNING, Action.RUN_BRAKE, Action.CROUCH_START, Action.CROUCH_END] # Added last 3 because Smashbot would do nothing if Chains.Waveshine was called during them
 
         jcshine = (smashbot_state.action == Action.KNEE_BEND) and (smashbot_state.action_frame == 3)
         lastdashframe = (smashbot_state.action == Action.DASHING) and (smashbot_state.action_frame == 12)
@@ -65,8 +65,8 @@ class Waveshine(Chain):
         isInShineStart = smashbot_state.action in [Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND]
         needsJC = smashbot_state.action in [Action.SHIELD_RELEASE, Action.SHIELD, Action.TURNING_RUN] #Added TURNING_RUN in case waveshine gets called during that animation
 
-        # Jump out of shield
-        if needsJC:
+        # Jump out of shield, turning run, or tilt turn
+        if needsJC or (smashbot_state.action == Action.TURNING and smashbot_state.action_frame in range(2,12)): #
             if controller.prev.button[Button.BUTTON_Y]:
                 controller.empty_input()
                 return
@@ -114,7 +114,7 @@ class Waveshine(Chain):
             delta = (self.distance / 2) # 0->0.5
             if not direction:
                 delta = -delta
-            controller.tilt_analog(Button.BUTTON_MAIN, 0.5 + delta, .35) #consider adding functionality for perfect WD angle which is x:0.9625 y:-0.2875 using standard coordinates from -1 to 1
+            controller.tilt_analog(Button.BUTTON_MAIN, 0.5 + delta, .35)
             return
 
         # If we're sliding and have shined, then we're all done here

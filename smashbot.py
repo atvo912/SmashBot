@@ -46,6 +46,8 @@ parser.add_argument('--configdir', '-c', type=is_dir,
                     help='Manually specify the Dolphin config directory to use')
 parser.add_argument('--address', '-a', default="",
                     help='IP address of Slippi/Wii')
+parser.add_argument('--connect_code', '-t', default="",
+                    help='Direct connect code to connect to in Slippi Online')
 
 args = parser.parse_args()
 
@@ -62,22 +64,20 @@ if not args.bot:
     opponent_type = melee.enums.ControllerType.GCN_ADAPTER
 
 #Create our console object. This will be the primary object that we will interface with
-console = melee.console.Console(ai_port=args.port,
-                                is_dolphin=True,
-                                opponent_port=args.opponent,
-                                opponent_type=opponent_type,
-                                dolphin_executable_path=args.dolphinexecutable,
+console = melee.console.Console(path=args.dolphinexecutable,
                                 slippi_address=args.address,
                                 logger=log)
 
-controller_one = melee.controller.Controller(port=args.port, console=console)
-controller_two = None
+controller_one = melee.controller.Controller(console=console, port=args.port)
+controller_two = melee.controller.Controller(console=console,
+                                             port=args.opponent,
+                                             type=opponent_type)
 
 #initialize our agent
 agent1 = ESAgent(console, args.port, args.opponent, controller_one)
 agent2 = None
 if args.bot:
-    controller_two = melee.controller.Controller(port=args.opponent, console=console)
+    controller_two = melee.controller.Controller(console=console, port=args.opponent)
     agent2 = ESAgent(console, args.opponent, args.port, controller_two)
 
 def signal_handler(signal, frame):
@@ -104,14 +104,11 @@ if not console.connect():
     print("\tIf you're trying to autodiscover, local firewall settings can " +
           "get in the way. Try specifying the address manually.")
     sys.exit(-1)
+print("Connected")
 
-#Plug our controller in
-#   Due to how named pipes work, this has to come AFTER running dolphin
-#   NOTE: If you're loading a movie file, don't connect the controller,
-#   dolphin will hang waiting for input and never receive it
+# Plug our controller in
 controller_one.connect()
-if controller_two:
-    controller_two.connect()
+controller_two.connect()
 
 supportedcharacters = [melee.enums.Character.PEACH, melee.enums.Character.CPTFALCON, melee.enums.Character.FALCO, \
     melee.enums.Character.FOX, melee.enums.Character.SAMUS, melee.enums.Character.ZELDA, melee.enums.Character.SHEIK, \
@@ -134,14 +131,18 @@ while True:
             if agent2:
                 agent2.difficulty = gamestate.player[agent2.smashbot_port].stock
 
-        if gamestate.stage != melee.enums.Stage.FINAL_DESTINATION:
-            melee.techskill.multishine(ai_state=gamestate.player[agent1.smashbot_port],
-                                       controller=agent1.controller)
-        elif gamestate.player[agent1.smashbot_port].character not in supportedcharacters:
+        if gamestate.player[agent1.smashbot_port].character not in supportedcharacters:
             melee.techskill.multishine(ai_state=gamestate.player[agent1.smashbot_port],
                                        controller=agent1.controller)
         else:
             # try:
+            discovered_port = melee.gamestate.port_detector(gamestate, agent1.controller, melee.enums.Character.FOX)
+            agent1.smashbot_port = discovered_port
+            if agent1.smashbot_port == 1:
+                agent1.opponent_port = 2
+            else:
+                agent1.opponent_port = 1
+
             agent1.act(gamestate)
             if agent2:
                 agent2.act(gamestate)
@@ -154,40 +155,15 @@ while True:
             #         log.log("Notes", "Exception thrown: " + repr(error) + " ", concat=True)
             #     else:
             #         print("WARNING: Exception thrown: ", error)
-
-    #If we're at the character select screen, choose our character
-    elif gamestate.menu_state == melee.enums.Menu.CHARACTER_SELECT:
-        melee.menuhelper.choose_character(character=melee.enums.Character.FOX,
-                                          gamestate=gamestate,
-                                          port=args.port,
-                                          opponent_port=args.opponent,
-                                          controller=agent1.controller,
-                                          swag=True,
-                                          start=False)
-        if agent2:
-            melee.menuhelper.choose_character(character=melee.enums.Character.FOX,
-                                              gamestate=gamestate,
-                                              port=args.opponent,
-                                              opponent_port=args.port,
-                                              controller=agent2.controller,
-                                              swag=True,
-                                              start=False)
-    #If we're at the postgame scores screen, spam START
-    elif gamestate.menu_state == melee.enums.Menu.POSTGAME_SCORES:
-        melee.menuhelper.skip_postgame(controller=agent1.controller)
-        if agent2:
-            melee.menuhelper.skip_postgame(controller=agent2.controller)
-    #If we're at the stage select screen, choose a stage
-    elif gamestate.menu_state == melee.enums.Menu.STAGE_SELECT:
-        if agent2:
-            agent2.controller.empty_input()
-        melee.menuhelper.choose_stage(stage=melee.enums.Stage.FINAL_DESTINATION,
-                                      gamestate=gamestate,
-                                      controller=agent1.controller)
-    #Flush any button presses queued up
-    agent1.controller.flush()
-    if agent2:
-        agent2.controller.flush()
+    else:
+        melee.menuhelper.MenuHelper.menu_helper_simple(gamestate,
+                                                        controller_one,
+                                                        args.port,
+                                                        melee.enums.Character.FOX,
+                                                        melee.enums.Stage.FINAL_DESTINATION,
+                                                        args.connect_code,
+                                                        autostart=False,
+                                                        swag=True)
 
     if log:
         log.log("Notes", "Goals: " + str(agent1.strategy), concat=True)

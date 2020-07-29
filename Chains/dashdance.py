@@ -15,12 +15,12 @@ class DashDance(Chain):
             self.controller.empty_input()
             return
 
-        # Causes an empty_input if hitting right did not cause Smashbot to be TURNING or DASHING right.
+        # Causes an empty_input if hitting left did not cause Smashbot to be TURNING or DASHING left, i.e. if Smashbot attempts a dashback during frames 1-3 of initial dash forward.
         if (self.controller.prev.main_stick[0] == 1) and (smashbot_state.action == Action.DASHING and not smashbot_state.facing):
             self.controller.empty_input()
             return
 
-        # Causes an empty_input if hitting left did not cause Smashbot to be TURNING or DASHING left.
+        # Causes an empty_input if hitting left did not cause Smashbot to be TURNING or DASHING left, i.e. if Smashbot attempts a dashback during frames 1-3 of initial dash forward.
         if (self.controller.prev.main_stick[0] == 0) and (smashbot_state.action == Action.DASHING and smashbot_state.facing):
             self.controller.empty_input()
             return
