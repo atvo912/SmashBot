@@ -155,7 +155,7 @@ class Defend(Tactic):
             self.logger.log("Notes", "framesuntilhit: " + str(framesuntilhit) + " ", concat=True)
 
         # Don't shine clank on the most optimal difficulty
-        if self.difficulty >= 2:
+        if self.difficulty >= 69:
             # If the attack has exactly one hitbox, then try shine clanking to defend
             if framedata.hitbox_count(opponent_state.character, opponent_state.action) == 1:
                 # It must be the first frame of the attack

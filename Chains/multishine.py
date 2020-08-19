@@ -1,8 +1,17 @@
 import melee
 from melee.enums import Action, Button
 from Chains.chain import Chain
+from enum import Enum
+
+class MULTISHINE_DIRECTION(Enum):
+    NEUTRAL = 1
+    FORWARD = 2
+    BACK = 3
 
 class Multishine(Chain):
+    def __init__(self, direction = MULTISHINE_DIRECTION.NEUTRAL):
+        self.direction = direction
+
     def step(self, gamestate, smashbot_state, opponent_state):
         controller = self.controller
 
@@ -23,13 +32,16 @@ class Multishine(Chain):
                 return
             if smashbot_state.action_frame == 2:
                 self.interruptible = False
-                controller.tilt_analog(Button.BUTTON_MAIN, int(smashbot_state.facing), .5) #advancing JC shine
-                #controller.empty_input() #removed for advancing JC shine
+                if self.direction == MULTISHINE_DIRECTION.FORWARD:
+                    controller.tilt_analog(Button.BUTTON_MAIN, int(smashbot_state.facing), .5) #advancing JC shine
+                elif self.direction == MULTISHINE_DIRECTION.BACK:
+                    controller.tilt_analog(Button.BUTTON_MAIN, int(not smashbot_state.facing), .5)
+                else:
+                    controller.empty_input()
                 return
             if smashbot_state.action_frame == 1:
                 self.interruptible = True
-                #controller.tilt_analog(Button.BUTTON_MAIN, int(smashbot_state.facing), .5) #advancing JC shine
-                controller.empty_input() #removed for advancing JC shine
+                controller.empty_input()
                 return
 
         isInShineStart = (smashbot_state.action == Action.DOWN_B_STUN or \

@@ -342,6 +342,7 @@ class Edgeguard(Tactic):
 
     def step(self, gamestate, smashbot_state, opponent_state):
         self._propagate  = (gamestate, smashbot_state, opponent_state)
+        self.logger.log("Notes", "Opp Y Speed: " + str(opponent_state.speed_y_self), concat=True)
 
         recoverhigh = self.canrecoverhigh(gamestate, opponent_state)
 
@@ -402,7 +403,7 @@ class Edgeguard(Tactic):
 
         edgegrabframes = self.snaptoedgeframes(gamestate, opponent_state)
 
-        # How heigh can they go with a jump?
+        # How high can they go with a jump?
         potentialheight = djheight + opponent_state.y
         if potentialheight < -23:
             mustupb = True
@@ -525,7 +526,8 @@ class Edgeguard(Tactic):
 
             # Can we challenge their ledge?
             framesleft = Punish.framesleft(opponent_state, self.framedata)
-            if not recoverhigh and not onedge and opponent_state.invulnerability_left < 5 and edgedistance < 10:
+            mightFFsnap = (opponent_state.action == Action.SLIDING_OFF_EDGE and opponent_state.action_frame in range(0,10))
+            if not recoverhigh and not onedge and opponent_state.invulnerability_left < 5 and edgedistance < 10 and not mightFFsnap:
                 if randomgrab or framesleft > 10:
                     wavedash = True
                     if self.framedata.is_attack(opponent_state.character, opponent_state.action):
