@@ -108,7 +108,8 @@ class Waveshine(Chain):
 
             # If we're facing AWAY FROM the edge, it's not safe to wavedash off the edge. Adjust the distance down
             #if smashbot_state.facing == smashbot_state.x > 0:
-            self.distance = min(edgedistance / 69, 1)
+            #if abs(endposition)+5 > melee.stages.EDGE_GROUND_POSITION[gamestate.stage]:
+                #self.distance = min(edgedistance / 69, 1)
 
             # Normalize distance from (0->1) to (-0.5 -> 0.5)
             delta = (self.distance / 2) # 0->0.5
