@@ -9,7 +9,7 @@ class MULTISHINE_DIRECTION(Enum):
     BACK = 3
 
 class Multishine(Chain):
-    def __init__(self, direction = MULTISHINE_DIRECTION.NEUTRAL):
+    def __init__(self, direction = MULTISHINE_DIRECTION.FORWARD):
         self.direction = direction
 
     def step(self, gamestate, smashbot_state, opponent_state):

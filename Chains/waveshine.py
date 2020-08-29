@@ -63,7 +63,7 @@ class Waveshine(Chain):
             return
 
         isInShineStart = smashbot_state.action in [Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND]
-        needsJC = smashbot_state.action in [Action.SHIELD_RELEASE, Action.SHIELD, Action.TURNING_RUN] #Added TURNING_RUN in case waveshine gets called during that animation
+        needsJC = smashbot_state.action in [Action.SHIELD, Action.SHIELD_RELEASE, Action.TURNING_RUN] #Added TURNING_RUN in case waveshine gets called during that animation
 
         # Jump out of shield, turning run, or tilt turn
         if needsJC or (smashbot_state.action == Action.TURNING and smashbot_state.action_frame in range(2,12)): #

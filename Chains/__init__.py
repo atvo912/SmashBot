@@ -24,3 +24,4 @@ from Chains.roll import Roll
 from Chains.edgebair import Edgebair
 from Chains.tiltattack import TiltAttack
 from Chains.boardsideplatform import BoardSidePlatform
+from Chains.shieldaction import ShieldAction

@@ -7,6 +7,7 @@ from Chains.smashattack import SMASH_DIRECTION
 from Chains.shffl import SHFFL_DIRECTION
 from Chains.grabandthrow import THROW_DIRECTION
 from Chains.tiltattack import TILT_DIRECTION
+from Chains.shieldaction import SHIELD_ACTION
 
 class Punish(Tactic):
     # How many frames do we have to work with for the punish
@@ -294,6 +295,18 @@ class Punish(Tactic):
 
             distance = abs(endposition - smashbot_endposition)
 
+
+            dtiltthese = [Action.DOWNTILT, Action.NEUTRAL_ATTACK_1, Action.NEUTRAL_ATTACK_2, Action.NEUTRAL_ATTACK_3, Action.LOOPING_ATTACK_START, Action.LOOPING_ATTACK_MIDDLE, Action.LOOPING_ATTACK_END]
+            if opponent_state.action in dtiltthese and 15 < distance < 50 and framesleft >= 7:
+                if facing:
+                    self.pickchain(Chains.TiltAttack, [TILT_DIRECTION.DOWN])
+                    return
+                else:
+                    self.pickchain(Chains.TiltAttack, [TILT_DIRECTION.TURNAROUND])
+                    return
+
+
+
             if not slideoff and distance < 14.5 and -5 < height < 17: #REMOVED -5 < height < 8 to make Smashbot attempt chaingrabbing #Consider adding some conditions here/below to check for CC/ASDI percentages and/or other relevant percentages
                 #if smashbot_state.action == Action.SHIELD_RELEASE and smashbot_state.action_frame == 1:
                     #self.pickchain(Chains.Powershield)
@@ -336,6 +349,27 @@ class Punish(Tactic):
                     self.pickchain(Chains.Wavedash)
                     return
 
+        foxshinerange = 10 # Lowered from 11.8
+        if smashbot_state.action == Action.DASHING:
+            foxshinerange = 9
+
+        endposition = opponent_state.x + self.framedata.slide_distance(opponent_state, opponent_state.speed_x_attack, framesleft)
+        slidedistance = self.framedata.slide_distance(smashbot_state, smashbot_state.speed_ground_x_self, framesleft)
+        smashbot_endposition = slidedistance + smashbot_state.x
+        distance = abs(endposition - smashbot_endposition)
+        shieldreleaseframe1 = (smashbot_state.action == Action.SHIELD_RELEASE and smashbot_state.action_frame == 1)
+        if shieldreleaseframe1: #attempt powershield action, note, we don't have a way of knowing if we hit a physical PS
+            if gamestate.distance < 9:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSSHINE])
+                return
+            if distance in range(10,18) and facing:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSDTILT])
+                return
+            if distance in range (10,15) and not facing:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSUTILT])
+                return
+
+
         # We can't smash our opponent, so let's just shine instead. Do we have time for that?
         #TODO: Wrap the shine range into a helper
         framesneeded = 1
@@ -345,10 +379,6 @@ class Punish(Tactic):
             framesneeded = 4
         if smashbot_state.action in [Action.DOWN_B_STUN, Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND]:
             framesneeded = 4
-
-        foxshinerange = 10 # Lowered from 11.8
-        if smashbot_state.action == Action.DASHING:
-            foxshinerange = 9
 
         if gamestate.distance < foxshinerange:
             if framesneeded <= framesleft:
