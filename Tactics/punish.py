@@ -203,6 +203,21 @@ class Punish(Tactic):
             self.pickchain(Chains.Nothing)
             return
 
+
+        shieldreleaseframe1 = (smashbot_state.action == Action.SHIELD_RELEASE and smashbot_state.action_frame == 1)
+        if shieldreleaseframe1: #attempt powershield action, note, we don't have a way of knowing if we hit a physical PS
+            self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSSHINE])
+            return
+            """if gamestate.distance < 9:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSSHINE])
+                return
+            if gamestate.distance in range(10,25) and facing:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSDTILT])
+                return
+            if gamestate.distance in range (10,15) and not facing:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSUTILT])
+                return"""
+
         # How many frames do we need for an upsmash?
         # It's 7 frames normally, plus some transition frames
         # 3 if in shield, shine, or dash/running
@@ -212,11 +227,11 @@ class Punish(Tactic):
         shineactions = [Action.DOWN_B_STUN, Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND]
         runningactions = [Action.DASHING, Action.RUNNING]
         if smashbot_state.action in shieldactions:
-            framesneeded += 3
+            framesneeded += 1
         if smashbot_state.action in shineactions:
-            framesneeded += 3
+            framesneeded += 1
         if smashbot_state.action in runningactions:
-            framesneeded += 3
+            framesneeded += 1
 
         endposition = opponent_state.x
         isroll = self.framedata.is_roll(opponent_state.character, opponent_state.action)
@@ -373,19 +388,6 @@ class Punish(Tactic):
             shinerange = 12.8
         if smashbot_state.action == Action.DASHING:
             foxshinerange = 9.5
-
-        shieldreleaseframe1 = (smashbot_state.action == Action.SHIELD_RELEASE and smashbot_state.action_frame == 1)
-        if shieldreleaseframe1: #attempt powershield action, note, we don't have a way of knowing if we hit a physical PS
-            if gamestate.distance < 9:
-                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSSHINE])
-                return
-            if gamestate.distance in range(10,25) and facing:
-                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSDTILT])
-                return
-            if gamestate.distance in range (10,15) and not facing:
-                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSUTILT])
-                return
-
 
         edgetooclose = (smashbot_state.action == Action.EDGE_TEETERING_START or melee.stages.EDGE_GROUND_POSITION[gamestate.stage] - abs(smashbot_state.x) < 5) or (smashbot_state.action in [Action.RUNNING, Action.RUN_BRAKE, Action.CROUCH_START] and melee.stages.EDGE_GROUND_POSITION[gamestate.stage] - abs(smashbot_state.x) < 10.5)
         if gamestate.distance < foxshinerange and not edgetooclose:
