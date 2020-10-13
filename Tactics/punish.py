@@ -108,7 +108,7 @@ class Punish(Tactic):
         if opponent_state.action in [Action.UAIR_LANDING, Action.FAIR_LANDING, \
                 Action.DAIR_LANDING, Action.BAIR_LANDING, Action.NAIR_LANDING]:
             # TODO: DO an actual lookup to see how many frames this is
-            return 9 - (opponent_state.action_frame // 3)
+            return (framedata.frame_count(opponent_state.character, opponent_state.action) // 2) - (opponent_state.action_frame // 2)
 
         # Exception for Jigglypuff rollout
         #   The action frames are weird for this action, and Jiggs is actionable during it in 1 frame
