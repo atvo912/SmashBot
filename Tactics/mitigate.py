@@ -51,7 +51,7 @@ class Mitigate(Tactic):
             y = 0.55
             if bool(gamestate.frame % 2):
                 # If we're off the stage, DI up and in
-                x = not smashbot_state.facing
+                x = smashbot_state.facing
                 y = 0.45
                 """if smashbot_state.off_stage:
                     y = 1

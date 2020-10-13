@@ -87,7 +87,7 @@ class Punish(Tactic):
             if opponent_state.action in [Action.LYING_GROUND_UP, Action.LYING_GROUND_DOWN]:
                 return 1
 
-            # If opponent is in the air, we need to cap the retun at when they will hit the ground
+            # If opponent is in the air, we need to cap the return at when they will hit the ground
             if opponent_state.y > .02 or not opponent_state.on_ground:
                 # When will they land?
                 speed = opponent_state.speed_y_attack + opponent_state.speed_y_self
@@ -111,7 +111,7 @@ class Punish(Tactic):
         if opponent_state.action in [Action.UAIR_LANDING, Action.FAIR_LANDING, \
                 Action.DAIR_LANDING, Action.BAIR_LANDING, Action.NAIR_LANDING]:
             # TODO: DO an actual lookup to see how many frames this is
-            return (framedata.frame_count(opponent_state.character, opponent_state.action) // 2) - (opponent_state.action_frame // 2)
+            return 9 - (opponent_state.action_frame // 3)
 
         # Exception for Jigglypuff rollout
         #   The action frames are weird for this action, and Jiggs is actionable during it in 1 frame
@@ -159,7 +159,7 @@ class Punish(Tactic):
             Action.RUNNING]
 
         #TODO: Wrap the shine range into a helper
-        foxshinerange = 11.8
+        foxshinerange = 9.9 #lowered from 11.8
         inshinerange = gamestate.distance < foxshinerange
 
         if inshinerange and smashbot_state.action in shineablestates:
@@ -179,6 +179,17 @@ class Punish(Tactic):
     def step(self, gamestate, smashbot_state, opponent_state):
         self._propagate  = (gamestate, smashbot_state, opponent_state)
 
+        # Can we charge an upsmash right now?
+        framesleft = Punish.framesleft(opponent_state, self.framedata)
+        endposition = opponent_state.x + self.framedata.slide_distance(opponent_state, opponent_state.speed_x_attack, framesleft)
+        slidedistance = self.framedata.slide_distance(smashbot_state, smashbot_state.speed_ground_x_self, framesleft)
+        smashbot_endposition = slidedistance + smashbot_state.x
+
+        if self.logger:
+            self.logger.log("Notes", "framesleft: " + str(framesleft) + " ", concat=True)
+            self.logger.log("Notes", "initial endposition: " + str(endposition) + " ", concat=True)
+            self.logger.log("Notes", "initial smashbot_endposition: " + str(smashbot_endposition) + " ", concat=True)
+
         #If we can't interrupt the chain, just continue it
         if self.chain != None and not self.chain.interruptible:
             self.chain.step(gamestate, smashbot_state, opponent_state)
@@ -191,11 +202,6 @@ class Punish(Tactic):
         if smashbot_state.action in inactionablestates:
             self.pickchain(Chains.Nothing)
             return
-
-        # Can we charge an upsmash right now?
-        framesleft = Punish.framesleft(opponent_state, self.framedata)
-        if self.logger:
-            self.logger.log("Notes", "framesleft: " + str(framesleft) + " ", concat=True)
 
         # How many frames do we need for an upsmash?
         # It's 7 frames normally, plus some transition frames
@@ -291,11 +297,16 @@ class Punish(Tactic):
                     height += speed
 
             distance = abs(endposition - smashbot_endposition)
-            if not slideoff and distance < 14.5 and -5 < height < 17:
+            x = 1
+            # If we are really close to the edge, wavedash straight down
+            if melee.stages.EDGE_GROUND_POSITION[gamestate.stage] - abs(smashbot_state.x) < 3:
+                x = 0
+            # This makes Smashbot wavedash down if he shines the opponent outwards near the ledge.
+            if abs(opponent_state.x) + 41 > melee.stages.EDGE_GROUND_POSITION[gamestate.stage] and abs(opponent_state.x) > abs(smashbot_state.x):
+                x = 0
+
+            if not slideoff and distance < 14.5 and -5 < height < 8:
                 if facing:
-                    # Do the upsmash
-                    # NOTE: If we get here, we want to delete the chain and start over
-                    #   Since the amount we need to charge may have changed
                     self.chain = None
                     """if (opponent_state.action in [Action.TECH_MISS_DOWN, Action.TECH_MISS_UP]) or (opponent_state.percent >= 100):
                         self.pickchain(Chains.SmashAttack, [framesleft-framesneeded-1, SMASH_DIRECTION.UP])
@@ -331,7 +342,14 @@ class Punish(Tactic):
                                 self.pickchain(Chains.Waveshine, [x])
                             else:
                                 self.pickchain(Chains.Shffl, [SHFFL_DIRECTION.BACK])
+                                #self.pickchain(Chains.TiltAttack, [TILT_DIRECTION.UP])
                             return
+                        # If we are running away from our opponent, just shine now
+                        onright = opponent_state.x < smashbot_state.x
+                        if (smashbot_state.speed_ground_x_self > 0) == onright and abs(opponent_state.x - smashbot_state.x) <= 9.5:
+                            self.pickchain(Chains.Waveshine, [x])
+                            return
+                    return
             # If we're not in attack range, and can't run, then maybe we can wavedash in
             #   Now we need more time for the wavedash. 10 frames of lag, and 3 jumping
             framesneeded = 13
@@ -339,18 +357,6 @@ class Punish(Tactic):
                 if smashbot_state.action in shieldactions or smashbot_state.action in shineactions:
                     self.pickchain(Chains.Wavedash)
                     return
-
-        shieldreleaseframe1 = (smashbot_state.action == Action.SHIELD_RELEASE and smashbot_state.action_frame == 1)
-        if shieldreleaseframe1: #attempt powershield action, note, we don't have a way of knowing if we hit a physical PS
-            if gamestate.distance < 9:
-                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSSHINE])
-                return
-            if distance in range(10,18) and facing:
-                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSDTILT])
-                return
-            if distance in range (10,15) and not facing:
-                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSUTILT])
-                return
 
         # We can't smash our opponent, so let's just shine instead. Do we have time for that?
         #TODO: Wrap the shine range into a helper
@@ -361,8 +367,28 @@ class Punish(Tactic):
             framesneeded = 4
         if smashbot_state.action in [Action.DOWN_B_STUN, Action.DOWN_B_GROUND_START, Action.DOWN_B_GROUND]:
             framesneeded = 4
-        foxshinerange = 11.8
-        if gamestate.distance < foxshinerange:
+
+        foxshinerange = 9.9
+        if smashbot_state.action == Action.RUNNING:
+            shinerange = 12.8
+        if smashbot_state.action == Action.DASHING:
+            foxshinerange = 9.5
+
+        shieldreleaseframe1 = (smashbot_state.action == Action.SHIELD_RELEASE and smashbot_state.action_frame == 1)
+        if shieldreleaseframe1: #attempt powershield action, note, we don't have a way of knowing if we hit a physical PS
+            if gamestate.distance < 9:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSSHINE])
+                return
+            if gamestate.distance in range(10,25) and facing:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSDTILT])
+                return
+            if gamestate.distance in range (10,15) and not facing:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSUTILT])
+                return
+
+
+        edgetooclose = (smashbot_state.action == Action.EDGE_TEETERING_START or melee.stages.EDGE_GROUND_POSITION[gamestate.stage] - abs(smashbot_state.x) < 5) or (smashbot_state.action in [Action.RUNNING, Action.RUN_BRAKE, Action.CROUCH_START] and melee.stages.EDGE_GROUND_POSITION[gamestate.stage] - abs(smashbot_state.x) < 10.5)
+        if gamestate.distance < foxshinerange and not edgetooclose:
             if framesneeded <= framesleft:
                 # Also, don't shine someone in the middle of a roll
                 if (not isroll) or (opponent_state.action_frame < 3):
@@ -374,11 +400,20 @@ class Punish(Tactic):
                     if melee.stages.EDGE_GROUND_POSITION[gamestate.stage] - abs(smashbot_state.x) < 3:
                         x = 0
                     # Additionally, if the opponent is going to get sent offstage by the shine, wavedash down
-                    if abs(endposition)+20 > melee.stages.EDGE_GROUND_POSITION[gamestate.stage]:
+                    # This makes Smashbot wavedash down if he shines the opponent outwards near the ledge. The gamestate.distance condition is there to ignore RUNNING situations where Smashbot/opponent are within 0.8 units where an extra frame causes them to switch sides.
+                    if abs(opponent_state.x) + 41 > melee.stages.EDGE_GROUND_POSITION[gamestate.stage] and abs(opponent_state.x) > abs(smashbot_state.x) and gamestate.distance > 0.8 and smashbot_state.action in [Action.RUNNING, Action.RUN_BRAKE, Action.CROUCH_START]:
                         x = 0
-                    if framesleft in range(1,5):
+                    # RUNNING and DASHING are very different. Even if Smashbot/opponent are within 0.1 units of each other during DASHING, they will not cross each other up if Smashbot does a pivot shine.
+                    if abs(opponent_state.x) + 41 > melee.stages.EDGE_GROUND_POSITION[gamestate.stage] and abs(opponent_state.x) > abs(smashbot_state.x) and smashbot_state.action in [Action.DASHING, Action.TURNING, Action.STANDING]:
+                        x = 0
+                    # If we are running away from our opponent, just shine now
+                    onright = opponent_state.x < smashbot_state.x
+                    if (smashbot_state.speed_ground_x_self > 0) == onright and abs(opponent_state.x - smashbot_state.x) <= 9.5:
                         self.pickchain(Chains.Waveshine, [x])
-                    return
+                        return
+                    if framesleft in range(1,7):
+                        self.pickchain(Chains.Waveshine, [x])
+                        return
             # We're in range, but don't have enough time. Let's try turning around to do a pivot.
             else:
                 self.chain = None
