@@ -58,6 +58,9 @@ class Defend(Tactic):
         return False
 
     def needsdefense(smashbot_state, opponent_state, gamestate, framedata):
+        if smashbot_state.action == Action.SHIELD_RELEASE:
+            return False
+
         # Is opponent attacking?
         if smashbot_state.invulnerability_left > 2:
             return False

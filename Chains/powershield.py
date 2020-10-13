@@ -39,8 +39,8 @@ class Powershield(Chain):
             self.interruptible = True
             controller.empty_input()
             #controller.press_button(Button.BUTTON_Y) #test jump OOS
-            controller.press_button(Button.BUTTON_B) #test powershield dtilt
-            controller.tilt_analog(Button.BUTTON_MAIN, .5, 0) #test powershield shine
+            #controller.press_button(Button.BUTTON_B) #test powershield dtilt
+            #controller.tilt_analog(Button.BUTTON_MAIN, .5, 0) #test powershield shine
             return
 
         isshielding = smashbot_state.action == Action.SHIELD \

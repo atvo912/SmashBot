@@ -45,7 +45,7 @@ class Mitigate(Tactic):
             return
 
         # Smash DI
-        if smashbot_state.hitlag > 0:
+        if smashbot_state.hitlag > 0 and smashbot_state.action != Action.SHIELD_STUN:
             # Alternate each frame
             x = smashbot_state.x < opponent_state.x
             y = 0.55
@@ -53,7 +53,18 @@ class Mitigate(Tactic):
                 # If we're off the stage, DI up and in
                 x = smashbot_state.facing
                 y = 0.45
-                """if smashbot_state.off_stage:
+            self.chain = None
+            self.pickchain(Chains.DI, [x, y])
+            return
+
+        """# Smash DI
+        if smashbot_state.hitlag > 0:
+            # Alternate each frame
+            x = 0.5
+            y = 0.5
+            if bool(gamestate.frame % 2):
+                # If we're off the stage, DI up and in
+                if smashbot_state.off_stage:
                     y = 1
                     x = 0
                     if smashbot_state.x < 0:
@@ -69,10 +80,10 @@ class Mitigate(Tactic):
                         y = 0.5
                         x = 1
                         if smashbot_state.x < 0:
-                            x = 0"""
+                            x = 0
             self.chain = None
             self.pickchain(Chains.DI, [x, y])
-            return
+            return"""
 
         # Tech if we need to
         #   Calculate when we will land
