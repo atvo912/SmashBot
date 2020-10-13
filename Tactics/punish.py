@@ -11,7 +11,7 @@ from Chains.shieldaction import SHIELD_ACTION
 
 class Punish(Tactic):
     # How many frames do we have to work with for the punish
-    def framesleft(opponent_state, framedata):
+    def framesleft(opponent_state, framedata, smashbot_state):
         # For some dumb reason, the game shows the standing animation as having a large hitstun
         #   manually account for this
         if opponent_state.action == Action.STANDING:
@@ -71,7 +71,9 @@ class Punish(Tactic):
                     return 0
                 frame = framedata.first_hitbox_frame(opponent_state.character, opponent_state.action)
                 return max(0, frame - opponent_state.action_frame - 1)
-            if attackstate == melee.enums.AttackState.ATTACKING:
+            if attackstate == melee.enums.AttackState.ATTACKING and smashbot_state.action == Action.SHIELD_RELEASE:
+                return framedata.frame_count(opponent_state.character, opponent_state.action) - opponent_state.action_frame
+            if attackstate == melee.enums.AttackState.ATTACKING and smashbot_state.action != Action.SHIELD_RELEASE:
                 return 0
             if attackstate == melee.enums.AttackState.COOLDOWN:
                 frame = framedata.iasa(opponent_state.character, opponent_state.action)
@@ -142,7 +144,7 @@ class Punish(Tactic):
         if firefox and opponent_state.y > 15:
             return False
 
-        left = Punish.framesleft(opponent_state, framedata)
+        left = Punish.framesleft(opponent_state, framedata, smashbot_state)
         # Will our opponent be invulnerable for the entire punishable window?
         if left <= opponent_state.invulnerability_left:
             return False
@@ -159,7 +161,7 @@ class Punish(Tactic):
             Action.RUNNING]
 
         #TODO: Wrap the shine range into a helper
-        foxshinerange = 9.9 #lowered from 11.8
+        foxshinerange = 11.8 #lowered from 11.8
         inshinerange = gamestate.distance < foxshinerange
 
         if inshinerange and smashbot_state.action in shineablestates:
@@ -180,7 +182,7 @@ class Punish(Tactic):
         self._propagate  = (gamestate, smashbot_state, opponent_state)
 
         # Can we charge an upsmash right now?
-        framesleft = Punish.framesleft(opponent_state, self.framedata)
+        framesleft = Punish.framesleft(opponent_state, self.framedata, smashbot_state)
         endposition = opponent_state.x + self.framedata.slide_distance(opponent_state, opponent_state.speed_x_attack, framesleft)
         slidedistance = self.framedata.slide_distance(smashbot_state, smashbot_state.speed_ground_x_self, framesleft)
         smashbot_endposition = slidedistance + smashbot_state.x
