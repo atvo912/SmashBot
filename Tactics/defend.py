@@ -11,7 +11,8 @@ class Defend(Tactic):
 
         # Ignore Fox lasers. They 'just' do damage. Nothing we actually care about
         #   It's worse to put ourselves in stun just to prevent a few percent
-        if opponent_state.character == Character.FOX:
+        throwstates = [Action.THROW_DOWN, Action.THROW_UP, Action.THROW_FORWARD, Action.THROW_BACK]
+        if opponent_state.character == Character.FOX or smashbot_state.action in throwstates:
             return False
 
         # Loop through each projectile
@@ -154,17 +155,9 @@ class Defend(Tactic):
             self.logger.log("Notes", "framesuntilhit: " + str(framesuntilhit) + " ", concat=True)
 
         # Don't shine clank on the most optimal difficulty
-        if self.difficulty >= 2:
-            # If the attack has exactly one hitbox, then try shine clanking to defend
-            if framedata.hitbox_count(opponent_state.character, opponent_state.action) == 1:
-                # It must be the first frame of the attack
-                if hitframe == framedata.first_hitbox_frame(opponent_state.character, opponent_state.action):
-                    # Grounded attacks only
-                    if opponent_state.on_ground:
-                        if (framesuntilhit == 2 and smashbot_state.action == Action.DASHING) or \
-                                (framesuntilhit == 1 and smashbot_state.action == Action.TURNING):
-                            self.pickchain(Chains.Waveshine)
-                            return
+        #if self.difficulty >= 2:
+        clankthese = [Action.DOWNTILT, Action.NEUTRAL_ATTACK_1, Action.NEUTRAL_ATTACK_2, Action.NEUTRAL_ATTACK_3, Action.LOOPING_ATTACK_START, Action.LOOPING_ATTACK_MIDDLE, Action.LOOPING_ATTACK_END]
+
 
         onfront = (opponent_state.x < smashbot_state.x) == opponent_state.facing
         # Are we in the powershield window?
@@ -175,6 +168,17 @@ class Defend(Tactic):
                 return
             hold = framedata.hitbox_count(opponent_state.character, opponent_state.action) > 1
             self.pickchain(Chains.Powershield, [hold])
+            if opponent_state.action in clankthese:
+                    # If the attack has exactly one hitbox, then try shine clanking to defend
+                    if framedata.hitbox_count(opponent_state.character, opponent_state.action) == 1:
+                        # It must be the first frame of the attack
+                        if hitframe == framedata.first_hitbox_frame(opponent_state.character, opponent_state.action):
+                        # Grounded attacks only
+                            if opponent_state.on_ground:
+                                if (framesuntilhit == 2 and smashbot_state.action == Action.DASHING) or \
+                                    (framesuntilhit == 1 and smashbot_state.action == Action.TURNING):
+                                    self.pickchain(Chains.Waveshine)
+                                    return
         else:
             # 12 starting buffer for Fox's character model size
             bufferzone = 12

@@ -12,7 +12,7 @@ class Mitigate(Tactic):
     def needsmitigation(smashbot_state):
         # Always interrupt if we got hit. Whatever chain we were in will have been broken anyway
         if smashbot_state.action in [Action.GRABBED, Action.GRAB_PUMMELED, Action.GRAB_PULL, \
-                Action.GRAB_PUMMELED, Action.GRAB_PULLING_HIGH, Action.GRABBED_WAIT_HIGH, Action.PUMMELED_HIGH]:
+                Action.GRAB_PUMMELED, Action.GRAB_PULLING_HIGH, Action.GRABBED_WAIT_HIGH, Action.PUMMELED_HIGH, Action.SHIELD_STUN]:
             return True
 
         # Thrown action
@@ -47,11 +47,13 @@ class Mitigate(Tactic):
         # Smash DI
         if smashbot_state.hitlag > 0:
             # Alternate each frame
-            x = 0.5
-            y = 0.5
+            x = smashbot_state.x < opponent_state.x
+            y = 0.55
             if bool(gamestate.frame % 2):
                 # If we're off the stage, DI up and in
-                if smashbot_state.off_stage:
+                x = not smashbot_state.facing
+                y = 0.45
+                """if smashbot_state.off_stage:
                     y = 1
                     x = 0
                     if smashbot_state.x < 0:
@@ -67,7 +69,7 @@ class Mitigate(Tactic):
                         y = 0.5
                         x = 1
                         if smashbot_state.x < 0:
-                            x = 0
+                            x = 0"""
             self.chain = None
             self.pickchain(Chains.DI, [x, y])
             return

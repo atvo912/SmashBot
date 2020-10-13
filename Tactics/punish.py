@@ -5,6 +5,9 @@ from melee.enums import Action, Button, Character
 from Tactics.tactic import Tactic
 from Chains.smashattack import SMASH_DIRECTION
 from Chains.shffl import SHFFL_DIRECTION
+from Chains.grabandthrow import THROW_DIRECTION
+from Chains.tiltattack import TILT_DIRECTION
+from Chains.shieldaction import SHIELD_ACTION
 
 class Punish(Tactic):
     # How many frames do we have to work with for the punish
@@ -100,7 +103,7 @@ class Punish(Tactic):
                     # Shortcut if we get too far
                     if count > 120:
                         break
-                return count
+                return min(count, opponent_state.hitstun_frames_left)
 
             return opponent_state.hitstun_frames_left
 
@@ -288,21 +291,47 @@ class Punish(Tactic):
                     height += speed
 
             distance = abs(endposition - smashbot_endposition)
-            if not slideoff and distance < 14.5 and -5 < height < 8:
+            if not slideoff and distance < 14.5 and -5 < height < 17:
                 if facing:
                     # Do the upsmash
                     # NOTE: If we get here, we want to delete the chain and start over
                     #   Since the amount we need to charge may have changed
                     self.chain = None
-                    self.pickchain(Chains.SmashAttack, [framesleft-framesneeded-1, SMASH_DIRECTION.UP])
+                    """if (opponent_state.action in [Action.TECH_MISS_DOWN, Action.TECH_MISS_UP]) or (opponent_state.percent >= 100):
+                        self.pickchain(Chains.SmashAttack, [framesleft-framesneeded-1, SMASH_DIRECTION.UP])
+                    ##EVERYTHING BELOW HERE IS EXPERIMENTAL
+                    #if framesleft < 20 and framesleft > 9:
+                        #self.pickchain(Chains.Nothing)
+                        #return
+                    if (framesleft in range(7,9) and opponent_state.action not in [Action.TECH_MISS_DOWN, Action.TECH_MISS_UP]) or (smashbot_state.action == Action.GRAB_WAIT):
+                        #if opponent_state.character in [Character.CPTFALCON, Character.FALCO, Character.FOX]:
+                            self.pickchain(Chains.SmashAttack, [framesleft-framesneeded-1, SMASH_DIRECTION.UP]) #test dthrow instead of usmash
+                    else:
+                            self.pickchain(Chains.SmashAttack, [framesleft-framesneeded-1, SMASH_DIRECTION.UP])
+                        #self.pickchain(Chains.Shffl, [SHFFL_DIRECTION.UP]) #test shffl uair instead of usmash
+                        #self.pickchain(Chains.TiltAttack, [TILT_DIRECTION.TURNAROUND]) #test utilt instead of usmash"""
+                    # If Smashbot is in the corner and below usmash kill %, he will opt to waveshine them back towards center rather than usmash
+                    if abs(smashbot_state.x) + 42 > melee.stages.EDGE_GROUND_POSITION[gamestate.stage] and opponent_state.percent < 89 and abs(opponent_state.x) < abs(smashbot_state.x) and gamestate.distance < 9.9:
+                        self.pickchain(Chains.Waveshine, [x])
+                    # Do the upsmash
+                    # NOTE: If we get here, we want to delete the chain and start over
+                    #   Since the amount we need to charge may have changed
+                    else:
+                        self.pickchain(Chains.SmashAttack, [framesleft-framesneeded-1, SMASH_DIRECTION.UP])
                     return
                 else:
+                    if abs(smashbot_state.x) + 42 > melee.stages.EDGE_GROUND_POSITION[gamestate.stage] and opponent_state.percent < 89 and abs(opponent_state.x) < abs(smashbot_state.x) and distance < 9.9:
+                        self.pickchain(Chains.Waveshine, [x])
+                    else:
                     # Do the bair if there's not enough time to wavedash, but we're facing away and out of shine range
                     #   This shouldn't happen often, but can if we're pushed away after powershield
-                    offedge = melee.stages.EDGE_GROUND_POSITION[gamestate.stage] < abs(endposition)
-                    if framesleft < 11 and distance > 9 and not offedge:
-                        self.pickchain(Chains.Shffl, [SHFFL_DIRECTION.BACK])
-                        return
+                        offedge = melee.stages.EDGE_GROUND_POSITION[gamestate.stage] < abs(endposition)
+                        if framesleft < 11 and not offedge:
+                            if gamestate.distance <= 9.5 and opponent_state.percent < 89:
+                                self.pickchain(Chains.Waveshine, [x])
+                            else:
+                                self.pickchain(Chains.Shffl, [SHFFL_DIRECTION.BACK])
+                            return
             # If we're not in attack range, and can't run, then maybe we can wavedash in
             #   Now we need more time for the wavedash. 10 frames of lag, and 3 jumping
             framesneeded = 13
@@ -310,6 +339,18 @@ class Punish(Tactic):
                 if smashbot_state.action in shieldactions or smashbot_state.action in shineactions:
                     self.pickchain(Chains.Wavedash)
                     return
+
+        shieldreleaseframe1 = (smashbot_state.action == Action.SHIELD_RELEASE and smashbot_state.action_frame == 1)
+        if shieldreleaseframe1: #attempt powershield action, note, we don't have a way of knowing if we hit a physical PS
+            if gamestate.distance < 9:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSSHINE])
+                return
+            if distance in range(10,18) and facing:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSDTILT])
+                return
+            if distance in range (10,15) and not facing:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSUTILT])
+                return
 
         # We can't smash our opponent, so let's just shine instead. Do we have time for that?
         #TODO: Wrap the shine range into a helper
