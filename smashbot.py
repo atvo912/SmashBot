@@ -77,7 +77,8 @@ if not args.bot:
 # Create our console object. This will be the primary object that we will interface with
 console = melee.console.Console(path=args.dolphinexecutable,
                                 slippi_address=args.address,
-                                logger=log)
+                                logger=log,
+                                online_delay=0)
 
 controller_one = melee.controller.Controller(console=console, port=args.port)
 controller_two = melee.controller.Controller(console=console,
@@ -173,7 +174,7 @@ while True:
                                                         melee.enums.Character.FOX,
                                                         stagedict.get(args.stage, melee.enums.Stage.FINAL_DESTINATION),
                                                         args.connect_code,
-                                                        autostart=False,
+                                                        autostart=True,
                                                         swag=True)
 
     if log:
