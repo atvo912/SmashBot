@@ -72,7 +72,12 @@ class Punish(Tactic):
                 frame = framedata.first_hitbox_frame(opponent_state.character, opponent_state.action)
                 return max(0, frame - opponent_state.action_frame - 1)
             if attackstate == melee.enums.AttackState.ATTACKING and smashbot_state.action == Action.SHIELD_RELEASE:
-                return framedata.frame_count(opponent_state.character, opponent_state.action) - opponent_state.action_frame
+                if opponent_state.action in [Action.NAIR, Action.FAIR, Action.UAIR, Action.BAIR, Action.DAIR]:
+                    return 9
+                elif opponent_state.character == Character.PEACH and opponent_state.action in [Action.NEUTRAL_B_FULL_CHARGE, Action.WAIT_ITEM, Action.NEUTRAL_B_ATTACKING, Action.NEUTRAL_B_CHARGING, Action.NEUTRAL_B_FULL_CHARGE_AIR]:
+                    return 6
+                else:
+                    return framedata.frame_count(opponent_state.character, opponent_state.action) - opponent_state.action_frame
             if attackstate == melee.enums.AttackState.ATTACKING and smashbot_state.action != Action.SHIELD_RELEASE:
                 return 0
             if attackstate == melee.enums.AttackState.COOLDOWN:
@@ -113,6 +118,7 @@ class Punish(Tactic):
         if opponent_state.action in [Action.UAIR_LANDING, Action.FAIR_LANDING, \
                 Action.DAIR_LANDING, Action.BAIR_LANDING, Action.NAIR_LANDING]:
             # TODO: DO an actual lookup to see how many frames this is
+            # This will not be easy because every aerial increments through frames differently
             return 9 - (opponent_state.action_frame // 3)
 
         # Exception for Jigglypuff rollout
@@ -191,6 +197,7 @@ class Punish(Tactic):
             self.logger.log("Notes", "framesleft: " + str(framesleft) + " ", concat=True)
             self.logger.log("Notes", "initial endposition: " + str(endposition) + " ", concat=True)
             self.logger.log("Notes", "initial smashbot_endposition: " + str(smashbot_endposition) + " ", concat=True)
+            self.logger.log("Notes", "distance: " + str(gamestate.distance) + " ", concat=True)
 
         #If we can't interrupt the chain, just continue it
         if self.chain != None and not self.chain.interruptible:
@@ -206,21 +213,25 @@ class Punish(Tactic):
             return
 
 
-        shieldreleaseframe1 = (smashbot_state.action == Action.SHIELD_RELEASE and smashbot_state.action_frame == 1)
-        if shieldreleaseframe1: #attempt powershield action, note, we don't have a way of knowing if we hit a physical PS
-            self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSSHINE])
-            return
-            """if gamestate.distance < 9:
+        powershieldrelease = (smashbot_state.action == Action.SHIELD_RELEASE and smashbot_state.shield_strength == 60)
+        opponentxvelocity = (opponent_state.speed_air_x_self + opponent_state.speed_ground_x_self + opponent_state.speed_x_attack)
+        opponentonright = opponent_state.x > smashbot_state.x
+        if powershieldrelease: #attempt powershield action, note, we don't have a way of knowing for sure if we hit a physical PS
+            """if abs(smashbot_state.x - opponent_state.x) <= 16 and opponent_state.y <= 12.5 and not (opponentxvelocity > 0) == opponentonright and gamestate.distance <= 12.5:
                 self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSSHINE])
                 return
-            if gamestate.distance in range(10,25) and facing:
-                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSDTILT])
+            if abs(smashbot_state.x - opponent_state.x) <= 11 and opponent_state.y <= 12.5 and (opponentxvelocity > 0) == opponentonright and gamestate.distance <= 12.5:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSSHINE])
                 return
-            if gamestate.distance in range (10,15) and not facing:
-                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSUTILT])
-                return"""
+                #self.pickchain(Chains.SmashAttack, [framesleft-framesneeded-1, SMASH_DIRECTION.UP])"""
+            if gamestate.distance <= 14.5 and not (opponentxvelocity > 0) == opponentonright:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSSHINE])
+                return
+            if gamestate.distance <= 13 and (opponentxvelocity > 0) == opponentonright:
+                self.pickchain(Chains.ShieldAction, [SHIELD_ACTION.PSSHINE])
+                return
 
-        # How many frames do we need for an upsmash?
+        # How many frames do we need for an upsmash?oh, i just realized
         # It's 7 frames normally, plus some transition frames
         # 3 if in shield, shine, or dash/running
         framesneeded = 7
@@ -322,7 +333,7 @@ class Punish(Tactic):
             if abs(opponent_state.x) + 41 > melee.stages.EDGE_GROUND_POSITION[gamestate.stage] and abs(opponent_state.x) > abs(smashbot_state.x):
                 x = 0
 
-            if not slideoff and distance < 14.5 and -5 < height < 8:
+            if not slideoff and distance < 14.5 and -5 < height < 8: # (14.5/8) originally
                 if facing:
                     self.chain = None
                     """if (opponent_state.action in [Action.TECH_MISS_DOWN, Action.TECH_MISS_UP]) or (opponent_state.percent >= 100):
@@ -367,6 +378,18 @@ class Punish(Tactic):
                             self.pickchain(Chains.Waveshine, [x])
                             return
                     return
+
+            # Shine OOS
+            """if smashbot_state.action in shieldactions and abs(smashbot_state.x - opponent_state.x) < 16 and opponent_state.y < 15 and framesleft >= 4:
+                self.pickchain(Chains.Waveshine)
+                return"""
+            if smashbot_state.action in shieldactions and gamestate.distance <= 13.2 and not (opponentxvelocity > 0) == opponentonright and framesleft >= 4:
+                self.pickchain(Chains.Waveshine)
+                return
+            if smashbot_state.action in shieldactions and gamestate.distance <= 12 and (opponentxvelocity > 0) == opponentonright and framesleft >= 4:
+                self.pickchain(Chains.Waveshine)
+                return
+
             # If we're not in attack range, and can't run, then maybe we can wavedash in
             #   Now we need more time for the wavedash. 10 frames of lag, and 3 jumping
             framesneeded = 13
@@ -412,7 +435,7 @@ class Punish(Tactic):
                         x = 0
                     # If we are running away from our opponent, just shine now
                     onright = opponent_state.x < smashbot_state.x
-                    if (smashbot_state.speed_ground_x_self > 0) == onright and abs(opponent_state.x - smashbot_state.x) <= 9.5:
+                    if (smashbot_state.speed_ground_x_self > 0) == onright and gamestate.distance <= 9.5:
                         self.pickchain(Chains.Waveshine, [x])
                         return
                     if framesleft in range(1,7):

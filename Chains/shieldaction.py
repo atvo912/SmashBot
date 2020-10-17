@@ -31,10 +31,10 @@ class ShieldAction(Chain):
             controller.empty_input()
             return
 
-        #remember to add redundancy to check for SHIELD_RELEASE, but this just has button inputs atm
+        # Consider adding redundancy to check for SHIELD_RELEASE, but this just has button inputs atm
         if self.action == SHIELD_ACTION.PSSHINE:
             controller.press_button(Button.BUTTON_B)
-            controller.tilt_analog(Button.BUTTON_MAIN, .5, 0)
+            controller.tilt_analog(Button.BUTTON_MAIN, .5, .3)
             return
         if self.action == SHIELD_ACTION.PSUTILT:
             controller.press_button(Button.BUTTON_A)
