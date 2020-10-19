@@ -41,6 +41,10 @@ class Infinite(Tactic):
                 Action.SHIELD_STUN, Action.SHIELD_REFLECT]:
             return False
 
+        # Don't try to infinite if we're on a platform
+        if smashbot_state.y > 2:
+            return False
+
         # Should we try a waveshine infinite?
         #   They need to have high friction and not fall down
         if opponent_state.action in [Action.STANDING, Action.TURNING, Action.DASHING, Action.RUNNING, \
@@ -59,7 +63,7 @@ class Infinite(Tactic):
                 if opponent_state.x < 0:
                     edge_x = -edge_x
                 edgedistance = abs(edge_x - smashbot_state.x)
-                if edgedistance < 42: #increased from 16 due to Smashbot still wavedashing offstage even when he waveshines at an edgedistance of 25
+                if edgedistance < 16: #increased from 16 due to Smashbot still wavedashing offstage even when he waveshines at an edgedistance of 25
                     return False
 
         # If opponent is attacking, don't infinite
@@ -81,9 +85,6 @@ class Infinite(Tactic):
     def step(self, gamestate, smashbot_state, opponent_state):
         self._propagate  = (gamestate, smashbot_state, opponent_state)
 
-        # TODO Should this only be set once per instance?
-        self.movingright = opponent_state.speed_x_attack + opponent_state.speed_ground_x_self > 0
-
         #If we can't interrupt the chain, just continue it
         if self.chain != None and not self.chain.interruptible:
             self.chain.step(gamestate, smashbot_state, opponent_state)
@@ -100,25 +101,27 @@ class Infinite(Tactic):
             shinerange = 9.5
 
         # If we shine too close to the edge while accelerating horizontally, we can slide offstage and get into trouble
-        edgetooclose = (smashbot_state.action == Action.EDGE_TEETERING_START or melee.stages.EDGE_GROUND_POSITION[gamestate.stage] - abs(smashbot_state.x) < 5) or (smashbot_state.action in [Action.RUNNING, Action.RUN_BRAKE, Action.CROUCH_START] and melee.stages.EDGE_GROUND_POSITION[gamestate.stage] - abs(smashbot_state.x) < 10.5)
+        distance_from_edge = melee.stages.EDGE_GROUND_POSITION[gamestate.stage] - abs(smashbot_state.x)
+        edgetooclose = smashbot_state.action == Action.EDGE_TEETERING_START or distance_from_edge < 5
 
         # Try to do the shine
         if gamestate.distance < shinerange and not edgetooclose:
-            # emergency backup shine
-            if framesleft in range(1,3): #changed from framesleft == 1 so he has a slightly larger window to shine:
+            # Emergency backup shine. If we don't shine now, they'll get out of the combo
+            if framesleft == 1:
                 self.chain = None
                 self.pickchain(Chains.Waveshine)
                 return
-            onright = opponent_state.x < smashbot_state.x
-            opponentspeed = opponent_state.speed_x_attack + opponent_state.speed_ground_x_self
-            # If opponent isn't moving, then just try to shine back towards the middle
-            if abs(opponentspeed) > 0.01:
-                self.movingright = opponentspeed > 0
+
+            # Cut the run short and just shine now. Don't wait for the cross-up
+            #   This is here to prevent running too close to the edge and sliding off
+            if smashbot_state.action in [Action.RUNNING, Action.RUN_BRAKE, Action.CROUCH_START] and distance_from_edge < 16:
+                self.chain = None
+                self.pickchain(Chains.Waveshine)
+                return
 
             # We always want to try to shine our opponent towards the center of the stage
             # If we are lined up right now, do the shine
-            if smashbot_state.x < opponent_state.x < 0 or \
-                    0 < opponent_state.x < smashbot_state.x:
+            if (smashbot_state.x < opponent_state.x < 0) or (0 < opponent_state.x < smashbot_state.x):
                 self.chain = None
                 self.pickchain(Chains.Waveshine)
                 return
@@ -130,6 +133,7 @@ class Infinite(Tactic):
                 return
 
             # If we are running away from our opponent, just shine now
+            onright = opponent_state.x < smashbot_state.x
             if (smashbot_state.speed_ground_x_self > 0) == onright:
                 self.chain = None
                 self.pickchain(Chains.Waveshine)
@@ -139,7 +143,7 @@ class Infinite(Tactic):
             self.pickchain(Chains.Nothing)
             return
 
-        dontrun = smashbot_state.action == Action.DOWN_B_GROUND_START and smashbot_state.action_frame in [1,2]
-        if not dontrun:
-            self.pickchain(Chains.Run, [opponent_state.x > smashbot_state.x]) #old parameter of [opponent_state.speed_x_attack > 0] made smashbot run AWAY from the opponent's endposition due to their current velocity
+        if not (smashbot_state.action == Action.DOWN_B_GROUND_START and smashbot_state.action_frame in [1,2]):
+            self.pickchain(Chains.Run, [opponent_state.x > smashbot_state.x])
+            return
         return
