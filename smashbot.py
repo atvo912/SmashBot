@@ -4,6 +4,7 @@ import os
 import signal
 import sys
 import time
+import random
 
 import melee
 
@@ -36,7 +37,7 @@ parser.add_argument('--bot', '-b',
                     default=False)
 parser.add_argument('--debug', '-d', action='store_true',
                     help='Debug mode. Creates a CSV of all game state')
-parser.add_argument('--difficulty', '-i', type=int,
+parser.add_argument('--difficulty', '-i', type=int, default=-1,
                     help='Manually specify difficulty level of SmashBot')
 parser.add_argument('--nodolphin', '-n', action='store_true',
                     help='Don\'t run dolphin, (it is already running))')
@@ -77,8 +78,13 @@ if not args.bot:
 # Create our console object. This will be the primary object that we will interface with
 console = melee.console.Console(path=args.dolphinexecutable,
                                 slippi_address=args.address,
+<<<<<<< HEAD
                                 logger=log,
                                 online_delay=0)
+=======
+                                online_delay=2,
+                                logger=log)
+>>>>>>> 17226e45469480155979908d26f8e1df55cfe9af
 
 controller_one = melee.controller.Controller(console=console, port=args.port)
 controller_two = melee.controller.Controller(console=console,
@@ -86,11 +92,11 @@ controller_two = melee.controller.Controller(console=console,
                                              type=opponent_type)
 
 # initialize our agent
-agent1 = ESAgent(console, args.port, args.opponent, controller_one)
+agent1 = ESAgent(console, args.port, args.opponent, controller_one, args.difficulty)
 agent2 = None
 if args.bot:
     controller_two = melee.controller.Controller(console=console, port=args.opponent)
-    agent2 = ESAgent(console, args.opponent, args.port, controller_two)
+    agent2 = ESAgent(console, args.opponent, args.port, controller_two, args.difficulty)
 
 def signal_handler(signal, frame):
     console.stop()
@@ -126,6 +132,8 @@ supportedcharacters = [melee.enums.Character.PEACH, melee.enums.Character.CPTFAL
     melee.enums.Character.FOX, melee.enums.Character.SAMUS, melee.enums.Character.ZELDA, melee.enums.Character.SHEIK, \
     melee.enums.Character.PIKACHU, melee.enums.Character.JIGGLYPUFF, melee.enums.Character.MARTH]
 
+costume = 0
+
 # Main loop
 while True:
     # "step" to the next frame
@@ -133,40 +141,31 @@ while True:
 
     # What menu are we in?
     if gamestate.menu_state == melee.enums.Menu.IN_GAME:
-        # The agent's "step" will cascade all the way down the objective hierarchy
-        if args.difficulty:
-            agent1.difficulty = int(args.difficulty)
-            if agent2:
-                agent2.difficulty = int(args.difficulty)
+        # try:
+        discovered_port = melee.gamestate.port_detector(gamestate, melee.enums.Character.FOX, costume)
+        # Let's just assume SmashBot is on port 1 when this happens
+        if discovered_port == 0:
+            # If the discovered port was unsure, reroll our costume
+            costume = random.randint(0, 4)
+            discovered_port = 1
+        agent1.smashbot_port = discovered_port
+        if agent1.smashbot_port == 1:
+            agent1.opponent_port = 2
         else:
-            agent1.difficulty = gamestate.player[agent1.smashbot_port].stock
-            if agent2:
-                agent2.difficulty = gamestate.player[agent2.smashbot_port].stock
+            agent1.opponent_port = 1
 
-        if gamestate.player[agent1.smashbot_port].character not in supportedcharacters:
-            melee.techskill.multishine(ai_state=gamestate.player[agent1.smashbot_port],
-                                       controller=agent1.controller)
-        else:
-            # try:
-            discovered_port = melee.gamestate.port_detector(gamestate, agent1.controller, melee.enums.Character.FOX)
-            agent1.smashbot_port = discovered_port
-            if agent1.smashbot_port == 1:
-                agent1.opponent_port = 2
-            else:
-                agent1.opponent_port = 1
-
-            agent1.act(gamestate)
-            if agent2:
-                agent2.act(gamestate)
-            # except Exception as error:
-            #     # Do nothing in case of error thrown!
-            #     agent1.controller.empty_input()
-            #     if agent2:
-            #         agent2.controller.empty_input()
-            #     if log:
-            #         log.log("Notes", "Exception thrown: " + repr(error) + " ", concat=True)
-            #     else:
-            #         print("WARNING: Exception thrown: ", error)
+        agent1.act(gamestate)
+        if agent2:
+            agent2.act(gamestate)
+        # except Exception as error:
+        #     # Do nothing in case of error thrown!
+        #     agent1.controller.empty_input()
+        #     if agent2:
+        #         agent2.controller.empty_input()
+        #     if log:
+        #         log.log("Notes", "Exception thrown: " + repr(error) + " ", concat=True)
+        #     else:
+        #         print("WARNING: Exception thrown: ", error)
     else:
         melee.menuhelper.MenuHelper.menu_helper_simple(gamestate,
                                                         controller_one,
@@ -174,7 +173,12 @@ while True:
                                                         melee.enums.Character.FOX,
                                                         stagedict.get(args.stage, melee.enums.Stage.FINAL_DESTINATION),
                                                         args.connect_code,
+<<<<<<< HEAD
                                                         autostart=True,
+=======
+                                                        costume=costume,
+                                                        autostart=args.connect_code!="",
+>>>>>>> 17226e45469480155979908d26f8e1df55cfe9af
                                                         swag=True)
 
     if log:

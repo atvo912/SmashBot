@@ -13,6 +13,7 @@ from Tactics.infinite import Infinite
 from Tactics.celebrate import Celebrate
 from Tactics.wait import Wait
 from Tactics.retreat import Retreat
+from Tactics.selfdestruct import SelfDestruct
 
 class Bait(Strategy):
     def __init__(self, logger, controller, framedata, difficulty):
@@ -20,7 +21,8 @@ class Bait(Strategy):
         self.logger = logger
         self.controller = controller
         self.framedata = framedata
-        self.difficulty = difficulty
+        self.set_difficulty = difficulty
+        self.difficulty = 4
 
     def __str__(self):
         string = "Bait"
@@ -36,6 +38,16 @@ class Bait(Strategy):
 
     def step(self, gamestate, smashbot_state, opponent_state):
         self._propagate  = (gamestate, smashbot_state, opponent_state)
+
+        # -1 means auto-adjust difficulty based on stocks remaining
+        if self.set_difficulty == -1:
+            self.difficulty = smashbot_state.stock
+        else:
+            self.difficulty = self.set_difficulty
+
+        if SelfDestruct.shouldsd(gamestate, smashbot_state, opponent_state):
+            self.picktactic(Tactics.SelfDestruct)
+            return
 
         # If we have stopped approaching, reset the state
         if type(self.tactic) != Tactics.Approach:
